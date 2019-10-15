@@ -1,0 +1,27 @@
+{
+	"trash": {
+		"trashPath": "./Trash"
+	},
+	"syncDirectory": {
+		"path": "C:/Users/dmhzm/Desktop/FrugalDrive"
+	},
+	"fileWatcher": {
+		"persistent": true,
+		"ignored": [
+			"**/*.incomplete"
+		],
+		"ignoreInitial": false,
+		"followSymlinks": true,
+		"usePolling": true,
+		"interval": 100,
+		"binaryInterval": 300,
+		"alwaysStat": true,
+		"depth": 999,
+		"awaitWriteFinish": {
+			"stabilityThreshold": 2000,
+			"pollInterval": 100
+		},
+		"ignorePermissionErrors": true,
+		"atomic": true
+	}
+}

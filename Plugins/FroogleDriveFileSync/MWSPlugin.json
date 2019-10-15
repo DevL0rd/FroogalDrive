@@ -1,0 +1,8 @@
+{
+	"author": "Dustin Harris",
+	"enabled": true,
+	"loadWhenInWorkerMode": true,
+	"loadPriority": "-1",
+	"name": "Froogal Drive File Sync",
+	"varName": "FroogalDriveFileSync"
+}
