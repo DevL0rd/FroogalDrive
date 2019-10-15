@@ -1,7 +1,6 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
 const chokidar = require('chokidar');
-var watchers = {};
 var watcher
 const fs = require('fs');
 const mkdirp = require('mkdirp');
@@ -59,11 +58,6 @@ function init(pluginExports, sSettings, events, nIo, nLog, commands, nWorkerIo) 
     log = nLog;
     workerIo = nWorkerIo;
     io = nIo;
-    events.on("connection", function (socket) {
-        socket.on('ping', function () {
-            socket.emit('pong');
-        });
-    });
     if (nWorkerIo.isWorker) {
         events.on("doJob", function (job) {
             // if (job.jobName == "addAll") {
@@ -71,76 +65,98 @@ function init(pluginExports, sSettings, events, nIo, nLog, commands, nWorkerIo) 
             // }
         });
     } else {
-        //start watching directories
-        var path = settings.syncDirectory.path;
-        watchers[path] = chokidar.watch(path, settings.fileWatcher);
-        watcher = watchers[path];
-        watcher.on('add', function (path, stats) {
-            log("File '" + path + "' scanned.", false, "FroogalDriveSync");
-            fs.readFile(settings.syncDirectory.path + "/" + path, function (err, buf) {
-                if (err) {
-                    log(err.message + ".\n" + err.stack, true, "FroogalDriveSync");
-                    return;
-                }
-                newFileCache[path] = { stats: stats, md5: md5(buf) };
-                triggerWatcherReady();
+        initWatcher(function () {
+            io.emit("isReady");
+            events.on("connection", function (socket) {
+                socket.on('add', function () {
+
+                });
+                socket.on('addDir', function () {
+
+                });
+                socket.on('change', function () {
+
+                });
+                socket.on('unlink', function () {
+
+                });
+                socket.on('unlinkDir', function () {
+
+                });
+                socket.on('getFileCache', function () {
+                    socket.emit('getFileCache', fileCache);
+                });
             });
-        });
-        watcher.on('addDir', function (path, stats) {
-            if (path) { //ignore root dir
-                log("Directory '" + path + "' scanned.", false, "FroogalDriveSync");
-                newFileCache[path] = { stats: stats };
-                triggerWatcherReady();
-            }
-        });
-        watcher.on('ready', function () {
-            //not an accurate after inital scan time
-            triggerWatcherReady();
         });
     }
 }
+function initWatcher(doneCallback) {
+    //start watching directories
+    newFileCache = {};
+    var path = settings.syncDirectory.path;
+    watcher = chokidar.watch(path, settings.fileWatcher);
+    watcher.on('add', function (path, stats) {
+        log("File '" + path + "' scanned.", false, "FroogalDriveSync");
+        fs.readFile(settings.syncDirectory.path + "/" + path, function (err, buf) {
+            if (err) {
+                log(err.message + ".\n" + err.stack, true, "FroogalDriveSync");
+                return;
+            }
+            newFileCache[path] = { stats: stats, md5: md5(buf) };
+            triggerWatcherReady(doneCallback);
+        });
+    });
+    watcher.on('addDir', function (path, stats) {
+        if (path) { //ignore root dir
+            log("Directory '" + path + "' scanned.", false, "FroogalDriveSync");
+            newFileCache[path] = { stats: stats };
+            triggerWatcherReady(doneCallback);
+        }
+    });
+    watcher.on('ready', function () {
+        //not an accurate after inital scan time
+        triggerWatcherReady(doneCallback);
+    });
+}
 var watcherReadyTimeout
-function triggerWatcherReady() {
+var fileUpdateQueue = [];
+function triggerWatcherReady(doneCallback) {
     clearTimeout(watcherReadyTimeout);
     watcherReadyTimeout = setTimeout(function () {
         console.log(getChangedFiles(newFileCache, fileCache)); //DEBUG
-        fileCache = newFileCache;
+        fileCache = newFileCache; //Server only
         queueCacheSave();
-        watcher.on('add', function (path, stats) {
-            add(path, stats);
+        settings.fileWatcher.ignoreInitial = true;
+        watcher.close();
+        watcher = chokidar.watch(settings.syncDirectory.path, settings.fileWatcher);
+        watcher.on('add', add);
+        watcher.on('change', change);
+        watcher.on('unlink', unlink);
+        watcher.on('addDir', addDir);
+        watcher.on('unlinkDir', unlinkDir);
+        watcher.on('ready', function () {
+            log('FroogalDrive file scan complete! Watching for changes...', false, "FroogalDriveSync");
+            doneCallback();
         });
-        watcher.on('change', function (path, stats) {
-            change(path, stats);
-        });
-        watcher.on('unlink', function (path) {
-            unlink(path);
-        });
-        watcher.on('addDir', function (path, stats) {
-            addDir(path, stats);
-        });
-        watcher.on('unlinkDir', function (path) {
-            unlinkDir(path);
-        });
-        log('FroogalDrive file scan complete! Watching for changes...', false, "FroogalDriveSync");
     }, 1000);
 }
 function unlink(path) {
     log("File '" + path + "' removed. Sending update to clients.", false, "FroogalDriveSync");
     delete fileCache[path];
-    io.emit('fileUnlink', { path: path });
     queueCacheSave();
+    queueFileUpdate({ change: "unlink", path: path });
 }
 function unlinkDir(path) {
     log("Directory '" + path + "' removed. Sending update to clients.", false, "FroogalDriveSync");
     delete fileCache[path];
-    io.emit('unlinkDir', { path: path });
     queueCacheSave();
+    queueFileUpdate({ change: "unlinkDir", path: path });
 }
 function addDir(path, stats) {
     log("Directory '" + path + "' added. Sending update to clients.", false, "FroogalDriveSync");
     fileCache[path] = { stats: stats };
-    io.emit('addDir', { path: path, stats: stats });
     queueCacheSave();
+    queueFileUpdate({ change: "addDir", path: path, stats: stats });
 }
 function change(path, stats) {
     log("File '" + path + "' modified. Sending update to clients.", false, "FroogalDriveSync");
@@ -150,8 +166,8 @@ function change(path, stats) {
             return;
         }
         fileCache[path] = { stats: stats, md5: md5(buf) };
-        io.emit('fileChange', { path: path, stats: stats, md5: md5(buf) });
         queueCacheSave();
+        queueFileUpdate({ change: "change", path: path, stats: stats, md5: md5(buf) });
     });
 }
 function add(path, stats) {
@@ -162,8 +178,8 @@ function add(path, stats) {
             return;
         }
         fileCache[path] = { stats: stats, md5: md5(buf) };
-        io.emit('fileAdd', { path: path, stats: stats, md5: md5(buf) });
         queueCacheSave();
+        queueFileUpdate({ change: "add", path: path, stats: stats, md5: md5(buf) });
     });
 }
 function getChangedFiles(newFC, oldFC) {
@@ -198,39 +214,46 @@ function getChangedFiles(newFC, oldFC) {
             }
         }
     }
-    return sortOrderOfFileChanges(fileChanges);
+    return reduceFileChanges(fileChanges);
 }
-function sortOrderOfFileChanges(fileChanges) {
-    //sort by shortest folder depth first
-    fileChanges.sort(function (a, b) { return (a.path.match("/\\/g") || []).length - (b.path.match("/\\/g") || []).length });
-    //sort by action.
-    //All remove actions go first, then modify, then add
-    var sortedFileChanges = [];
+
+function reduceFileChanges(fileChanges) {
+    var newFilechanges = [];
     var unlinkdirs = [];
     var unlinks = [];
     var changes = [];
     var addDirs = [];
     var adds = [];
     for (i in fileChanges) {
-        var fChange = fileChanges[i].change;
-        if (fChange == "unlinkDir") {
+        var fileChange = fileChanges[i].change;
+        if (fileChange == "unlinkDir") {
             unlinkdirs.push(fileChanges[i])
-        } else if (fChange == "unlink") {
+        } else if (fileChange == "unlink") {
             unlinks.push(fileChanges[i]);
-        } else if (fChange == "change") {
+        } else if (fileChange == "change") {
             changes.push(fileChanges[i]);
-        } else if (fChange == "addDir") {
+        } else if (fileChange == "addDir") {
             addDirs.push(fileChanges[i]);
-        } else if (fChange == "add") {
+        } else if (fileChange == "add") {
             adds.push(fileChanges[i]);
         }
     }
-    sortedFileChanges = sortedFileChanges.concat(unlinkdirs);
-    sortedFileChanges = sortedFileChanges.concat(unlinks);
-    sortedFileChanges = sortedFileChanges.concat(changes);
-    sortedFileChanges = sortedFileChanges.concat(addDirs);
-    sortedFileChanges = sortedFileChanges.concat(adds);
-    return sortedFileChanges;
+    var filteredUnlinks = [];
+    for (i in unlinkdirs) {
+        var udir = unlinkdirs[i].path;
+        for (i2 in unlinks) {
+            if (!(unlinks[i2].path.split(udir).length > 1 && !unlinks[i2].path.split(udir)[0])) {
+                //only keep unlinked files not under a deleted dir
+                filteredUnlinks.push(unlinks[i2]);
+            }
+        }
+    }
+    newFilechanges = newFilechanges.concat(unlinkdirs);
+    newFilechanges = newFilechanges.concat(filteredUnlinks);
+    newFilechanges = newFilechanges.concat(changes);
+    newFilechanges = newFilechanges.concat(addDirs);
+    newFilechanges = newFilechanges.concat(adds);
+    return newFilechanges;
 }
 var cacheSaveTimeout;
 function queueCacheSave() {
@@ -240,8 +263,21 @@ function queueCacheSave() {
         log('Changes cached.', false, "FroogalDriveSync");
     }, 500);
 }
+var fileUpdateTimeout;
+function queueFileUpdate(fileUpdate) {
+    fileUpdateQueue.push(fileUpdate);
+    clearTimeout(fileUpdateTimeout);
+    fileUpdateTimeout = setTimeout(function () {
+        log('Sending local changes to clients...', false, "FroogalDriveSync");
+        var reducedChanges = reduceFileChanges(fileUpdateQueue);
+        console.log(reducedChanges); //DEBUG
+        io.emit("driveChange", reducedChanges);
+        fileUpdateQueue = [];
+    }, 500);
+}
 function uninit(events, io, log, commands) {
     //Leave blank and let server know this can be reloaded
+    watcher.close();
 }
 exports.init = init;
 exports.uninit = uninit;

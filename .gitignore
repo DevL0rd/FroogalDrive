@@ -1,4 +1,5 @@
 node_modules/
+FroogalDriveClient/node_modules
 package-lock.json
 Plugins/Accounts/Accounts.json
 Logs/

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Modular Web Server</title>
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/fa-svg-with-js.css">
+  <link rel="stylesheet" href="css/sytles.css">
+</head>
+
+<body>
+  <nav id="title-bar" class="rainbowBackgroundColor">
+    <div id="title">Froogal Drive</div>
+    <div id="title-bar-btns">
+      <button id="rld-btn" class="title-bar-tools" style="display:none;"><i class="fas fa-sync-alt"></i></button>
+      <button id="dev-btn" class="title-bar-tools" style="display:none;"><i class="fab fa-dev"></i></button>
+      <button id="min-btn" class="title-bar-btns"><i class="fas fa-window-minimize"></i></button>
+      <button id="max-btn" class="title-bar-btns"><i class="fas fa-window-maximize"></i></button>
+      <button id="close-btn" class="title-bar-btns"><i class="fas fa-window-close"></i></button>
+    </div>
+  </nav>
+  <div id="content" class="customScroll rainbowScrollColor">
+    <div id="toolBoxLeft" class="customScroll rainbowScrollColor">
+      <button id="fullConsole-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+        title="Console"><i class="fas fa-terminal"></i></button>
+      <button id="settings-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+        title="Settings"><i class="fas fa-cogs"></i></button>
+      <button id="console-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+        title="Console"><i class="fas fa-terminal"></i></button>
+    </div>
+    <div id="fullConsole" class="toolBoxApp">
+      <div id="fullConsoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
+      <input id="fullConsoleInput" type="text" placeholder="Console command"><br>
+    </div>
+    <div id="settings" class="toolBoxApp" style="display: none;">
+      <input id="settingsSearch" type="text" placeholder="Search settings">
+      <div class="row">
+        <div class="col-md-4 settingCol">
+          <div class="input-group centerHorz flex-nowrap">
+            <div class="input-group-prepend">
+              <span class="input-group-text">Debug</span>
+            </div>
+            <span class="input-group-append input-group-text">
+              <label class="switch">
+                <input id="debugEnabled" type="checkbox">
+                <span class="slider round"></span>
+              </label>
+            </span>
+          </div>
+        </div>
+        <div class="col-md-4 settingCol">
+          <div class="input-group centerHorz flex-nowrap">
+            <div class="input-group-prepend">
+              <span class="input-group-text">Dev Tools On Start</span>
+            </div>
+            <span class="input-group-append input-group-text">
+              <label class="switch">
+                <input id="devToolsOnStartup" type="checkbox">
+                <span class="slider round"></span>
+              </label>
+            </span>
+          </div>
+        </div>
+        <div class="col-md-4 settingCol">
+          <div class="input-group centerHorz flex-nowrap">
+            <div class="input-group-prepend">
+              <span class="input-group-text dark-group-text">Rainbow Accents</span>
+            </div>
+            <span class="input-group-append input-group-text dark-group-text">
+              <label class="switch">
+                <input id="rainbowEnabled" type="checkbox">
+                <span class="slider round"></span>
+              </label>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="console" style="display: none;">
+      <div id="consoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
+      <input id="consoleInput" type="text" placeholder="Console command"><br>
+    </div>
+  </div>
+  <div id="statusbar" class="rainbowBackgroundColor2">
+    <span id="statusbartext">Ready!</span>
+  </div>
+  <div id="pageLoadingCover">
+    <div class="centerVert">
+      <img src="img/loading.gif" class="loadingGif">
+      <h1 style="color:rgb(206, 206, 206); font-size: 16px;">
+        Application loading...
+      </h1>
+    </div>
+  </div>
+  <script src="js/fontawesome-all.min.js"></script>
+  <script src="js/Chart.min.js"></script>
+  <script>
+    // You can also require other files to run in this process
+    let $ = require('jquery');
+    require('popper.js');
+    require('bootstrap');
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip({ boundary: 'window' })
+    })
+  </script>
+  <script src="./js/animations.js"></script>
+  <script src="./js/client.js"></script>
+  <script src="./js/settings.js"></script>
+</body>
+
+</html>
