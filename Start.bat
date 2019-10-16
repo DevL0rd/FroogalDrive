@@ -2,6 +2,6 @@
 cls
 cd ../Modular-Web-Server
 :1
-npm start ../FroogalDrive nogui
+npm start ../FroogalDrive noui
 pause
 goto 1

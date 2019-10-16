@@ -1,4 +1,6 @@
 {
+	"IP": "0.0.0.0",
+	"port": 8081,
 	"trash": {
 		"trashPath": "./Trash"
 	},
@@ -23,5 +25,16 @@
 		},
 		"ignorePermissionErrors": true,
 		"atomic": true
+	},
+	"throttling": {
+		"videoBitRateKB": 51000,
+		"audioBitRateKB": 230,
+		"applicationDownloadThrottleMB": 15
+	},
+	"defaultHeaders": {
+		"Cache-Control": "max-age=0",
+		"X-Frame-Options": "SAMEORIGIN",
+		"X-XSS-Protection": "1; mode=block",
+		"X-Content-Type-Options": "nosniff"
 	}
 }

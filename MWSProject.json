@@ -12,6 +12,11 @@
 	],
 	"webRoot": "../FroogalDrive/WebRoot",
 	"pluginsPath": "../FroogalDrive/Plugins",
+	"upload": {
+		"enabled": true,
+		"limitMB": 0,
+		"path": "../FroogalDrive/Uploads"
+	},
 	"throttling": {
 		"videoBitRateKB": 51000,
 		"audioBitRateKB": 230,

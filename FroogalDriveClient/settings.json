@@ -1,4 +1,28 @@
 {
+	"IP": "0.0.0.0",
+	"port": 8081,
+	"syncDirectory": {
+		"path": "C:\\Github\\FroogalDrive\\FroogalDriveClient\\FroogalDrive"
+	},
+	"fileWatcher": {
+		"persistent": true,
+		"ignored": [
+			"**/*.incomplete"
+		],
+		"ignoreInitial": false,
+		"followSymlinks": true,
+		"usePolling": true,
+		"interval": 100,
+		"binaryInterval": 300,
+		"alwaysStat": true,
+		"depth": 999,
+		"awaitWriteFinish": {
+			"stabilityThreshold": 2000,
+			"pollInterval": 100
+		},
+		"ignorePermissionErrors": true,
+		"atomic": true
+	},
 	"debug": true,
 	"accentColor": {
 		"r": 50,
