@@ -139,18 +139,21 @@ function init(pluginExports, sSettings, events, nIo, nLog, commands, nWorkerIo) 
                 });
             });
         });
-        events.on("upload", function (request, response, urlParts, file, fields) {
+        events.on("uploadComplete", function (request, response, urlParts, file, fields) {
             if (requestFileCallbacks[fields.requestID]) { //request must be valid
-                var oldpath = file.path;
-                var newpath = settings.syncDirectory.path + "/" + fields.path;
+                var oldpath = file.path; //the files temp directory path
+                var newpath = settings.syncDirectory.path + "/" + fields.path; //the files new path
                 if (fs.existsSync(newpath)) {
                     fs.unlink(newpath, function (err) {
                         if (err) {
                             log(err.message + ".\n" + err.stack, true, "FroogalDriveSync");
-                            return
+                            return;
                         }
                         fs.rename(oldpath, newpath, function (err) {
-                            if (err) throw err;
+                            if (err) {
+                                log(err.message + ".\n" + err.stack, true, "FroogalDriveSync");
+                                return;
+                            }
                             response.writeHead(200);
                             response.end();
                             requestFileCallbacks[fields.requestID]();
@@ -159,7 +162,10 @@ function init(pluginExports, sSettings, events, nIo, nLog, commands, nWorkerIo) 
                     });
                 } else {
                     fs.rename(oldpath, newpath, function (err) {
-                        if (err) throw err;
+                        if (err) {
+                            log(err.message + ".\n" + err.stack, true, "FroogalDriveSync");
+                            return;
+                        }
                         response.writeHead(200);
                         response.end();
                         requestFileCallbacks[fields.requestID]();
@@ -167,7 +173,6 @@ function init(pluginExports, sSettings, events, nIo, nLog, commands, nWorkerIo) 
                     });
                 }
             }
-            return true; //we handled to upload so tell the serer not to do anything
         });
     }
 }
