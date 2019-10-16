@@ -11,6 +11,7 @@ const chokidar = require('chokidar');
 const md5 = require('md5');
 const AU = require('ansi_up');
 const cc = require('./Devlord_modules/conColors.js');
+const cs = require('./Devlord_modules/conSplash.js');
 const ansi_up = new AU.default;
 var socket;
 var watcher;
