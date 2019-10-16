@@ -3,3 +3,6 @@ FroogalDriveClient/node_modules
 package-lock.json
 Plugins/Accounts/Accounts.json
 Logs/
+Plugins/FroogleDriveFileSync/fileCache.json
+FroogalDriveClient/fileCache.json
+FroogalDriveClient/FroogalDrive
