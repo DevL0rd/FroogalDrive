@@ -14,8 +14,7 @@
 	"pluginsPath": "../FroogalDrive/Plugins",
 	"upload": {
 		"enabled": true,
-		"limitMB": 0,
-		"path": "../FroogalDrive/Uploads"
+		"limitMB": 0
 	},
 	"throttling": {
 		"videoBitRateKB": 51000,
