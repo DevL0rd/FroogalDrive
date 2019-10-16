@@ -10,6 +10,7 @@ const mkdirp = require('mkdirp');
 const chokidar = require('chokidar');
 const md5 = require('md5');
 const AU = require('ansi_up');
+const cc = require('./Devlord_modules/conColors.js');
 const ansi_up = new AU.default;
 var socket;
 var watcher;
@@ -141,11 +142,15 @@ ipcMain.on('registerForHTMLLogging', (event, arg) => {
 });
 var io = require('socket.io-client');
 var mainServerUrl = "http://" + settings.IP + ":8081";
-
+function formatAndColorString(str) {
+  var cstringColoredQuotes = cc.fg.white + str.replace(/\'.*\'/, cc.style.underscore + cc.fg.cyan + '$&' + cc.reset + cc.style.bright + cc.fg.white);
+  return cc.fg.white + cstringColoredQuotes + cc.reset + cc.fg.white;
+}
 function log(str) {
-  console.log(str);
+  var fString = formatAndColorString(str);
+  console.log(fString);
   if (htmlLoggingSender) {
-    htmlLoggingSender.send('log', ansi_up.ansi_to_html(str.replace("  ", "\xa0")) + "<br>");
+    htmlLoggingSender.send('log', ansi_up.ansi_to_html(fString.replace("  ", "\xa0")) + "<br>");
   }
 }
 
@@ -171,7 +176,6 @@ socket.on("driveChangeComplete", function () {
 socket.on("disconnect", function () {
   watcher.close();
 });
-var fileChangeCompleteTimeout
 socket.on('driveChange', function (fileChanges) {
   doFileChanges(fileChanges, socket, function () {
 

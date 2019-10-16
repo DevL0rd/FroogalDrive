@@ -134,7 +134,6 @@ function init(pluginExports, sSettings, events, nIo, nLog, commands, nWorkerIo) 
                 });
                 socket.on('driveChange', function (fileChanges) {
                     doFileChanges(fileChanges, socket, function () {
-                        console.log('driveChangeComplete');
                         socket.emit('driveChangeComplete');
                     });
                 });

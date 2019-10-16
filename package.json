@@ -1,5 +1,6 @@
 {
     "dependencies": {
+        "bcryptjs": "^2.4.3",
         "chokidar": "^3.2.1",
         "md5": "^2.2.1",
         "mime-types": "^2.1.24",
