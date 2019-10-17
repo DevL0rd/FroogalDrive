@@ -24,6 +24,8 @@ if (fs.existsSync(settingsPath)) {
   var settings = {
     "IP": "0.0.0.0",
     "port": 8081,
+    "email": "",
+    "persistentLoginKey": "",
     "syncDirectory": { "path": "./FroogalDrive" },
     "fileWatcher": {
       "persistent": true,
@@ -128,15 +130,7 @@ app.on('browser-window-created', function (e, window) {
 });
 
 
-// ipcMain.on('consoleCommand', (event, fullMessage) => {
-//   var args = fullMessage.split(" ");
-//   var command = args.shift().toLowerCase();
-//   if (mws.commands[command]) {
-//     mws.commands[command].do(args, fullMessage)
-//   } else {
-//     mws.log("Unknown command '" + command + "'.", true, "CONSOLE")
-//   }
-// })
+
 var htmlLoggingSender
 ipcMain.on('registerForHTMLLogging', (event, arg) => {
   htmlLoggingSender = event.sender
@@ -160,7 +154,16 @@ socket = io("http://" + settings.IP + ":80", {
 });
 var initialSync = true;
 socket.on("connect", function () {
-  log("Connected to FroogalDrive server. Starting file system watcher...");
+  log("Connected to FroogalDrive server! Please login.. You can use !login <email> <password> if you are not using the UI.");
+  if (settings.persistentLoginKey) {
+    socket.emit('autologin', {
+      email: settings.email,
+      persistentLoginKey: settings.persistentLoginKey
+    });
+  }
+});
+socket.on("clientRegistered", function () {
+  mainServerUrl = "http://" + settings.IP + ":8081" + "/" + settings.email;
   initWatcher(function () {
     initialSync = true;
     var changedFiles = getChangedFiles(newFileCache, fileCache);
@@ -169,6 +172,7 @@ socket.on("connect", function () {
     queueCacheSave();
   });
 });
+
 socket.on("driveChangeComplete", function () {
   if (initialSync) {
     socket.emit("getFileCache");
@@ -193,7 +197,7 @@ socket.on('getFileCache', function (nFileCache) {
 });
 socket.on('getFile', function (data) {
   var localFilePath = settings.syncDirectory.path + "/" + data.path;
-  uploadFile(localFilePath, { "auth": "todo", "path": data.path, "requestID": data.requestID });
+  uploadFile(localFilePath, { "auth": "todo", "path": data.path, "requestID": data.requestID, "email": settings.email });
 });
 function uploadFile(path, meta = {}) {
   var r = request.post("http://" + settings.IP + "/upload", function (err, httpResponse, body) {
@@ -205,8 +209,8 @@ function uploadFile(path, meta = {}) {
   for (i in meta) {
     form.append(i, meta[i]);
   }
+  console.log(path)
   form.append('file', fs.createReadStream(path));
-
 }
 function doFileChanges(fileChanges, socket, fcCallback, i = -1) {
 
@@ -227,7 +231,7 @@ function doFileChanges(fileChanges, socket, fcCallback, i = -1) {
       queueCacheSave();
       fs.unlink(localFilePath, function (err) {
         if (err) {
-          log(err.message + ".\n" + err.stack, true, "FroogalDriveSync");
+          log(err.message + ".\n" + err.stack);
           return
         }
         doFileChanges(fileChanges, socket, fcCallback, i);
@@ -243,20 +247,20 @@ function doFileChanges(fileChanges, socket, fcCallback, i = -1) {
         var lmd5 = md5(buf);
         if (lmd5 != fileChange.md5) {
           //get new file if different
-          log("File '" + fileChange.path + "' changed.", false, "FroogalDriveSync");
+          log("File '" + fileChange.path + "' changed.");
           downloadFile(mainServerUrl + "/" + fileChange.path, settings.syncDirectory.path + "/" + fileChange.path, function () {
             doFileChanges(fileChanges, socket, fcCallback, i);
-            log("File '" + fileChange.path + "' downloaded.", false, "FroogalDriveSync");
+            log("File '" + fileChange.path + "' downloaded.");
           })
         } else {
           doFileChanges(fileChanges, socket, fcCallback, i);
         }
       });
     } else {
-      log("File '" + fileChange.path + "' changed but is missing, downloading file.", false, "FroogalDriveSync");
+      log("File '" + fileChange.path + "' changed but is missing, downloading file.");
       downloadFile(mainServerUrl + "/" + fileChange.path, settings.syncDirectory.path + "/" + fileChange.path, function () {
         doFileChanges(fileChanges, socket, fcCallback, i);
-        log("File '" + fileChange.path + "' downloaded.", false, "FroogalDriveSync");
+        log("File '" + fileChange.path + "' downloaded.");
       })
     }
   } else if (fileChange.change == "addDir") {
@@ -272,7 +276,7 @@ function doFileChanges(fileChanges, socket, fcCallback, i = -1) {
       queueCacheSave();
       downloadFile(mainServerUrl + "/" + fileChange.path, settings.syncDirectory.path + "/" + fileChange.path, function () {
         doFileChanges(fileChanges, socket, fcCallback, i);
-        log("File '" + fileChange.path + "' downloaded.", false, "FroogalDriveSync");
+        log("File '" + fileChange.path + "' downloaded.");
       })
     } else {
       doFileChanges(fileChanges, socket, fcCallback, i);
@@ -378,7 +382,7 @@ function downloadFile(from, to, callbackRename) {
       response.pipe(file);
       response.on('end', function () {
         fs.rename(to + ".incomplete", to, function (err) {
-          if (err) log(err.message + ".\n" + err.stack, true, "Server");
+          if (err) log(err.message + ".\n" + err.stack);
           callbackRename();
         });
       })
@@ -496,3 +500,102 @@ function queueFileUpdate(fileUpdate) {
     }, 500);
   }
 }
+var commands = {
+  help: {
+    usage: "help",
+    help: "Displays this command list.",
+    do: function (args, fullMessage) {
+      for (command in commands) {
+        log(command + ":");
+        log("   " + commands[command].usage);
+        log("   " + commands[command].help);
+      }
+    }
+  },
+  login: {
+    usage: "login <email> <password>",
+    help: "Logs into FoogleDrive.",
+    do: function (args, fullMessage) {
+      if (!args || args.length != 3) {
+        var email = args[0];
+        var pass = args[1];
+        login(email, pass)
+      } else {
+        log("Usage: " + this.usage);
+      }
+    }
+  },
+  logout: {
+    usage: "logout",
+    help: "Logs out of FoogleDrive.",
+    do: function (args, fullMessage) {
+      logout();
+    }
+  },
+  exit: {
+    usage: "exit",
+    help: "Shuts the server down gracefully.",
+    do: function (args, fullMessage) {
+      events.trigger("exit");
+      process.exit();
+    }
+  }
+};
+ipcMain.on('consoleCommand', (event, fullMessage) => {
+  var args = fullMessage.split(" ");
+  var command = args.shift().toLowerCase().replace("!", "");
+  if (commands[command]) {
+    commands[command].do(args, fullMessage)
+  } else {
+    log("Unknown command '" + command + "'.")
+  }
+})
+process.stdin.on('data', function (line) {
+  var fullMessage = line.toString().replace("\r\n", "").replace("\n", "")
+  var args = fullMessage.split(" ");
+  var fullMessage = fullMessage.substr(fullMessage.indexOf(" ") + 1);
+  var command = args.shift().toLowerCase().replace("!", "");
+  //Commands
+  if (commands[command]) {
+    commands[command].do(args, fullMessage)
+  } else {
+    log("Unknown command '" + command + "'.")
+  }
+});
+
+function logout() {
+  socket.emit("logout");
+  settings.email = "";
+  settings.persistentLoginKey = "";
+  DB.save(settingsPath, settings);
+}
+
+function login(email, pass) {
+  if (email.length < 6 || !email.includes("@")) {
+    log("Invalid email address.");
+  } else {
+    socket.emit("login", {
+      email: email,
+      password: pass
+    });
+  }
+  socket.on('forcelogout', function (res) {
+    logout();
+  });
+}
+socket.on('loginResponse', function (res) {
+  if (res == "failed") {
+    //could not log in
+    log("Invalid credentials.");
+    settings.email = "";
+    settings.persistentLoginKey = "";
+    DB.save(settingsPath, settings);
+  } else {
+    log("Login successfull.");
+    settings.email = res.email;
+    settings.persistentLoginKey = res.persistentLoginKey;
+    DB.save(settingsPath, settings);
+    //socket.emit("getPermissions");
+    socket.emit("registerClient");
+  }
+});

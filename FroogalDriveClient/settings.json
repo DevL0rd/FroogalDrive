@@ -21,7 +21,8 @@
 			"pollInterval": 100
 		},
 		"ignorePermissionErrors": true,
-		"atomic": true
+		"atomic": true,
+		"cwd": "C:\\Github\\FroogalDrive\\FroogalDriveClient\\FroogalDrive"
 	},
 	"debug": true,
 	"accentColor": {
@@ -31,5 +32,7 @@
 		"a": 0.9
 	},
 	"rainbowEnabled": false,
-	"devToolsOnStartup": false
+	"devToolsOnStartup": false,
+	"persistentLoginKey": "678d5b3478050c189993a6ff6df6f00e2b373d65bb67eb2dee2dcac6f1ebf1c7",
+	"email": "dmhzmxn@gmail.com"
 }
